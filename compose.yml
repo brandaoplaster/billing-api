@@ -1,0 +1,47 @@
+services:
+  billing-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: billing_api
+    command: bash script/start.sh
+    depends_on:
+      billing_api_db:
+        condition: service_healthy
+    ports:
+      - 3000:3000
+    volumes:
+      - .:/app
+      - gem_cache:/usr/local/bundle
+    env_file:
+      - .env
+    networks:
+      - billing_api_net
+
+  billing_api_db:
+    image: "postgres:13"
+    container_name: billing_api_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_PASSWORD=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+    networks:
+      - billing_api_net
+
+volumes:
+  postgres_data:
+  gem_cache:
+
+networks:
+  billing_api_net:
